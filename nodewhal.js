@@ -116,7 +116,7 @@ function Nodewhal(userAgent) {
   };
 
   self.req = function(url, method, opts, session) {
-    return Nodewhal.respectRateLimits(url).then(function() {
+    return Nodewhal.respectRateLimits(method, url).then(function() {
       opts = opts || {};
       if (session && session.cookieJar) {
         opts.jar = session.cookieJar;
@@ -153,7 +153,7 @@ Nodewhal.rsvpRequest = function(method, url, opts) {
   });
 }
 
-Nodewhal.respectRateLimits = function (url) {
+Nodewhal.respectRateLimits = function (method, url) {
   return new RSVP.Promise(function(resolve, reject) {
     var now = new Date(),
         minInterval = 2100,
@@ -161,17 +161,17 @@ Nodewhal.respectRateLimits = function (url) {
         lastUrlInterval, lastUrlTime = lastRedditRequestTimeByUrl[url],
         interval = now - lastRedditRequestTime;
 
-    if (lastUrlTime) {
+    if (method == 'get' && lastUrlTime) {
       lastUrlInterval = now - lastUrlTime;
     }
     if (lastRedditRequestTime && interval < minInterval) {
       setTimeout(function() {
-        resolve(Nodewhal.respectRateLimits(url));
+        resolve(Nodewhal.respectRateLimits(method, url));
       }, minInterval - interval + 100);
     } else {
       if (lastUrlInterval && lastUrlInterval < minUrlInterval) {
         setTimeout(function() {
-          resolve(Nodewhal.respectRateLimits(url));
+          resolve(Nodewhal.respectRateLimits(method, url));
         }, minUrlInterval - lastUrlInterval + 100);
       } else {
         lastRedditRequestTime = now;
