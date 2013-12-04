@@ -1,0 +1,23 @@
+{
+  "name": "nodewhal",
+  "version": "0.0.0",
+  "description": "Node.js reddit API wrapper that relies heavily on RSVP promises",
+  "main": "nodewhal.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/go1dfish/nodewhal.git"
+  },
+  "dependencies": {
+    "rsvp":     "2.0.4",
+    "request":  "2.27.0"
+  },
+  "author": "go1dfish",
+  "license": "BSD-2-Clause",
+  "bugs": {
+    "url": "https://github.com/go1dfish/nodewhal/issues"
+  },
+  "homepage": "https://github.com/go1dfish/nodewhal"
+}
