@@ -11,7 +11,6 @@ function Nodewhal(userAgent) {
   if (!userAgent) {
     userAgent = 'noob-nodewhal-dev-soon-to-be-ip-banned';
   }
-
   self.login = function(username, password) {
     var cookieJar = request.jar();
     return self.post(baseUrl + '/api/login', {
@@ -151,6 +150,26 @@ function Nodewhal(userAgent) {
         return {};
       }
     });
+  };
+
+  self.byId = function (session, ids) {
+    var converted_ids = [];
+    for (var i in ids) {
+      converted_ids.push("t3_" + ids[i]);
+      console.log(ids[i]);
+    }
+    var url = baseUrl + "/by_id/" + converted_ids.join(",") + '/.json';
+    return self.get(url, {}, session).then(function (listing) {
+      var results = {}, resultsLength;
+      if (listing && listing.data && listing.data.children && listing.data.children.length) {
+        listing.data.children.forEach(function (submission) {
+          results[submission.data.name] = submission.data;
+        });
+        resultsLength = Object.keys(results).length;
+      }
+      return results;
+    });
+
   };
 
   self.byName = function(session, names) {
