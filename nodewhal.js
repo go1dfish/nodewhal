@@ -2,6 +2,7 @@ var request  = require('request'),
     RSVP     = require('rsvp'),
     schedule = require('./schedule'),
     baseUrl  = 'http://www.reddit.com',
+    knownShadowbans = {},
     lastRedditRequestTimeByUrl = {},
     lastRedditRequestTime;
 
@@ -81,6 +82,9 @@ function Nodewhal(userAgent) {
     var url = baseUrl + '/user/' + username;
     return Nodewhal.respectRateLimits('get', url).then(function() {
       return new RSVP.Promise(function(resolve, reject) {
+        if (knownShadowbans[username]) {
+          return resolve('shadowban');
+        }
         request(url, {}, function(error, response, body) {
           if (error) {
             reject(error);
@@ -88,6 +92,7 @@ function Nodewhal(userAgent) {
             if (body.indexOf('the page you requested does not exist') === -1) {
               resolve(username);
             } else {
+              knownShadowbans[username] = true;
               reject('shadowban');
             }
           }
