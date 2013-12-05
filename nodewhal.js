@@ -1,6 +1,7 @@
 var request = require('request'),
   RSVP = require('rsvp'),
   schedule = require('./schedule'),
+  EventSource = require('eventsource'),
   baseUrl = 'http://www.reddit.com',
   knownShadowbans = {},
   lastRedditRequestTimeByUrl = {},
@@ -12,6 +13,7 @@ function Nodewhal(userAgent) {
   if (!userAgent) {
     userAgent = 'noob-nodewhal-dev-soon-to-be-ip-banned';
   }
+  self.new_submissions = [];
   self.login = function (username, password) {
     var cookieJar = request.jar();
     return self.post(baseUrl + '/api/login', {
@@ -156,6 +158,40 @@ function Nodewhal(userAgent) {
     });
   };
 
+  self.startSubmissionStream = function (cb, subreddit, author, domain, is_self) {
+    url = "http://api.rednit.com/submission_stream?eventsource=true";
+    if (subreddit) {
+      url += "&subreddit=" + subreddit;
+    }
+    if (author) {
+      url += "&author=" + author;
+    }
+    if (domain) {
+      url += "&domain=" + domain;
+    }
+    if (is_self) {
+      url += "&is_self=" + is_self;
+    }
+    self.es = new EventSource(url);
+    if (cb != null) {
+      self.es.onmessage = function (e) {
+        cb(e.data);
+      }
+    }
+    else {
+      self.es.onmessage = function (e) {
+        self.new_submissions.push(e.data);
+      };
+      self.es.onerror = function () {
+        console.log("Error in the submission stream.");
+      }
+    }
+  };
+
+  self.stopSubmissionStream = function () {
+    self.es.close();
+  };
+
   self.byId = function (ids) {
     ids = ids.map(function (id) {
       if (id.substr(0, 3) == "t3_") {
@@ -217,6 +253,7 @@ function Nodewhal(userAgent) {
       });
   };
 }
+
 
 Nodewhal.schedule = schedule;
 
