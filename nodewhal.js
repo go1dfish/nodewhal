@@ -1,6 +1,7 @@
-var request = require('request'),
-    RSVP    = require('rsvp'),
-    baseUrl = 'http://www.reddit.com',
+var request  = require('request'),
+    RSVP     = require('rsvp'),
+    schedule = require('./schedule'),
+    baseUrl  = 'http://www.reddit.com',
     lastRedditRequestTimeByUrl = {},
     lastRedditRequestTime;
 
@@ -36,6 +37,7 @@ function Nodewhal(userAgent) {
         sr:       subreddit,
         uh:       session.modhash
     };
+    console.log('Submitting', urlOrText);
     if (kind === 'self' || ! urlOrText) {
       form.text = urlOrText;
     } else {
@@ -63,6 +65,37 @@ function Nodewhal(userAgent) {
     }, session)
   };
 
+  self.aboutUser = function(session, username) {
+    return self.get(baseUrl + '/user/' + username + '/about.json', {}, session);
+  };
+
+  self.submitted = function(session, subreddit, url) {
+    return self.get(baseUrl + '/r/' + subreddit + '/submit.json', {
+      form: {
+        url: url
+      }
+    }, session);
+  };
+
+  self.checkForShadowban = function(username) {
+    var url = baseUrl + '/user/' + username;
+    return Nodewhal.respectRateLimits('get', url).then(function() {
+      return new RSVP.Promise(function(resolve, reject) {
+        request(url, {}, function(error, response, body) {
+          if (error) {
+            reject(error);
+          } else {
+            if (body.indexOf('the page you requested does not exist') === -1) {
+              resolve(username);
+            } else {
+              reject('shadowban');
+            }
+          }
+        });
+      });
+    });
+  };
+
   self.listing = function(session, listingPath, options) {
     var url = baseUrl + listingPath + '.json',
         options = options || {},
@@ -87,7 +120,7 @@ function Nodewhal(userAgent) {
           if (!typeof max === 'undefined') {
             max = max - resultsLength;
           }
-          return Nodewhal.wait(options.wait).then(function() {
+          return schedule.wait(options.wait).then(function() {
             return self.listing(session, listingPath, {
               max: max,
               after: listing.data.after,
@@ -129,15 +162,23 @@ function Nodewhal(userAgent) {
       opts.headers['User-Agent'] = userAgent;
       return Nodewhal.rsvpRequest(method, url, opts);
     }).then(function(body) {
+      var json;
       try {
-        return JSON.parse(body);
+        json = JSON.parse(body);
       } catch(e) {
         console.error('Cant parse', body);
         throw e;
       }
+      if (json && json.error) {
+        console.log('error', json);
+        throw json.error;
+      }
+      return json;
     });
   };
 }
+
+Nodewhal.schedule = schedule;
 
 Nodewhal.rsvpRequest = function(method, url, opts) {
   return new RSVP.Promise(function(resolve, reject) {
@@ -169,12 +210,12 @@ Nodewhal.respectRateLimits = function (method, url) {
       lastUrlInterval = now - lastUrlTime;
     }
     if (lastRedditRequestTime && interval < minInterval) {
-      resolve(Nodewhal.wait(minInterval - interval).then(function() {
+      resolve(schedule.wait(minInterval - interval).then(function() {
         return Nodewhal.respectRateLimits(method, url);
       }));
     } else {
       if (lastUrlInterval && lastUrlInterval < minUrlInterval) {
-        resolve(Nodewhal.wait(minUrlInterval - lastUrlInterval).then(function() {
+        resolve(schedule.wait(minUrlInterval - lastUrlInterval).then(function() {
           return Nodewhal.respectRateLimits(method, url);
         }));
       } else {
@@ -185,11 +226,5 @@ Nodewhal.respectRateLimits = function (method, url) {
     }
   });
 };
-
-Nodewhal.wait = function(milliseconds) {
-  return new RSVP.Promise(function(resolve, reject) {
-    setTimeout(resolve, milliseconds || 0);
-  });
-}
 
 module.exports = Nodewhal;
