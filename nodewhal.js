@@ -13,7 +13,7 @@ function Nodewhal(userAgent) {
   if (!userAgent) {
     userAgent = 'noob-nodewhal-dev-soon-to-be-ip-banned';
   }
-  self.new_submissions = [];
+  self.newSubmissions = [];
   self.login = function (username, password) {
     var cookieJar = request.jar();
     return self.post(baseUrl + '/api/login', {
@@ -180,7 +180,7 @@ function Nodewhal(userAgent) {
     }
     else {
       self.es.onmessage = function (e) {
-        self.new_submissions.push(e.data);
+        self.newSubmissions.push(e.data);
       };
       self.es.onerror = function () {
         console.log("Error in the submission stream.");
