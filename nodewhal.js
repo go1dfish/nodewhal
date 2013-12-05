@@ -30,8 +30,7 @@ function Nodewhal(userAgent) {
 
   self.submit = function(session, subreddit, kind, title, urlOrText) {
     urlOrText = urlOrText || '';
-    kind = (kind || 'link').toLowerCase();
-    var form = {
+    kind = (kind || 'link').toLowerCase(); var form = {
         api_type: 'json',
         kind:     kind,
         title:    title,
@@ -53,10 +52,21 @@ function Nodewhal(userAgent) {
     });
   };
 
+  self.comment = function(session, thing_id, markdown) {
+    return self.post(baseUrl + '/api/comment', {
+      form: {
+        api_type: 'json',
+        text:     markdown,
+        thing_id: thing_id,
+        uh:       session.modhash
+      }
+    }, session);
+  };
+
   self.flair = function(session, subreddit, linkName, template, flairText) {
     return self.post(baseUrl + '/api/flair', {
       form: {
-        api_type:   'json',
+        api_type:           'json',
         link:               linkName,
         r:                  subreddit,
         text:               flairText,
@@ -71,6 +81,7 @@ function Nodewhal(userAgent) {
   };
 
   self.submitted = function(session, subreddit, url) {
+    url = encodeURIComponent(url);
     return self.get(baseUrl + '/r/' + subreddit + '/submit.json?url=' + url, {}, session);
   };
 
