@@ -71,11 +71,7 @@ function Nodewhal(userAgent) {
   };
 
   self.submitted = function(session, subreddit, url) {
-    return self.get(baseUrl + '/r/' + subreddit + '/submit.json', {
-      form: {
-        url: url
-      }
-    }, session);
+    return self.get(baseUrl + '/r/' + subreddit + '/submit.json?url=' + url, {}, session);
   };
 
   self.checkForShadowban = function(username) {
@@ -179,6 +175,9 @@ function Nodewhal(userAgent) {
         throw json.error;
       }
       return json;
+    }, function(error) {
+      if (error.stack) {console.error(error.stack);}
+      throw error;
     });
   };
 }
@@ -229,6 +228,11 @@ Nodewhal.respectRateLimits = function (method, url) {
         resolve(true);
       }
     }
+  }).then(undefined, function(error) {
+    if (error.stack) {
+      console.error(error.stack);
+    }
+    throw error;
   });
 };
 
