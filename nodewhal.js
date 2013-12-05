@@ -51,25 +51,23 @@ function Nodewhal(userAgent) {
   };
 
   self.flair = function(session, subreddit, linkName, template, flairText) {
-    console.log('session', session)
-    var form = {
+    return self.post(baseUrl + '/api/flair', {
+      form: {
         api_type:   'json',
         link:               linkName,
         r:                  subreddit,
         text:               flairText,
         css_class:          template,
         uh:                 session.modhash
-    };
-    console.log('form', form);
-    return self.post(baseUrl + '/api/flair', {
-      form: form
-    }, session).then(function(result) {
-      console.log(JSON.stringify(result));
-    });
+      }
+    }, session)
   };
 
-  self.listing = function(session, listingPath, max, after) {
+  self.listing = function(session, listingPath, options) {
     var url = baseUrl + listingPath + '.json',
+        options = options || {},
+        max = options.max,
+        after = options.after,
         limit = max || 100;
     if (after) {
       url += '?limit=' + limit + '&after=' + after;
@@ -89,11 +87,17 @@ function Nodewhal(userAgent) {
           if (!typeof max === 'undefined') {
             max = max - resultsLength;
           }
-          return self.listing(session, listingPath, max, listing.data.after).then(function(moreResults) {
-            Object.keys(moreResults).forEach(function(key) {
-              results[key] = moreResults[key];
-            });
-            return results;
+          return Nodewhal.wait(options.wait).then(function() {
+            return self.listing(session, listingPath, {
+              max: max,
+              after: listing.data.after,
+              wait: options.wait
+            }).then(function(moreResults) {
+              Object.keys(moreResults).forEach(function(key) {
+                results[key] = moreResults[key];
+              });
+              return results;
+            })
           });
         } else {
           return results;
@@ -128,7 +132,7 @@ function Nodewhal(userAgent) {
       try {
         return JSON.parse(body);
       } catch(e) {
-        console.log('Cant parse', body);
+        console.error('Cant parse', body);
         throw e;
       }
     });
@@ -165,14 +169,14 @@ Nodewhal.respectRateLimits = function (method, url) {
       lastUrlInterval = now - lastUrlTime;
     }
     if (lastRedditRequestTime && interval < minInterval) {
-      setTimeout(function() {
-        resolve(Nodewhal.respectRateLimits(method, url));
-      }, minInterval - interval + 100);
+      resolve(Nodewhal.wait(minInterval - interval).then(function() {
+        return Nodewhal.respectRateLimits(method, url);
+      }));
     } else {
       if (lastUrlInterval && lastUrlInterval < minUrlInterval) {
-        setTimeout(function() {
-          resolve(Nodewhal.respectRateLimits(method, url));
-        }, minUrlInterval - lastUrlInterval + 100);
+        resolve(Nodewhal.wait(minUrlInterval - lastUrlInterval).then(function() {
+          return Nodewhal.respectRateLimits(method, url);
+        }));
       } else {
         lastRedditRequestTime = now;
         lastRedditRequestTimeByUrl[url] = now;
@@ -181,5 +185,11 @@ Nodewhal.respectRateLimits = function (method, url) {
     }
   });
 };
+
+Nodewhal.wait = function(milliseconds) {
+  return new RSVP.Promise(function(resolve, reject) {
+    setTimeout(resolve, milliseconds || 0);
+  });
+}
 
 module.exports = Nodewhal;
