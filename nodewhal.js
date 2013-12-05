@@ -8,6 +8,7 @@ var request  = require('request'),
 
 function Nodewhal(userAgent) {
   var self = this;
+
   if (!userAgent) {
     userAgent = 'noob-nodewhal-dev-soon-to-be-ip-banned';
   }
@@ -21,20 +22,20 @@ function Nodewhal(userAgent) {
         user:     username
       }
     }, {cookieJar: cookieJar}).then(function(data) {
-      data = data.json.data;
-      data.cookieJar = cookieJar;
-      return data;
+      self.session =  data.json.data;
+      self.session.cookieJar = cookieJar;
+      return self;
     });
   };
 
-  self.submit = function(session, subreddit, kind, title, urlOrText) {
+  self.submit = function(subreddit, kind, title, urlOrText) {
     urlOrText = urlOrText || '';
     kind = (kind || 'link').toLowerCase(); var form = {
         api_type: 'json',
         kind:     kind,
         title:    title,
         sr:       subreddit,
-        uh:       session.modhash
+        uh:       self.session.modhash
     };
     console.log('Submitting', urlOrText);
     if (kind === 'self' || ! urlOrText) {
@@ -42,7 +43,7 @@ function Nodewhal(userAgent) {
     } else {
       form.url = urlOrText;
     }
-    return self.post(baseUrl + '/api/submit', {form: form}, session).then(function(data) {
+    return self.post(baseUrl + '/api/submit', {form: form}, self.session).then(function(data) {
       if (data && data.json && data.json.errors && data.json.errors.length) {
         throw data.json.errors;
       }
@@ -51,18 +52,18 @@ function Nodewhal(userAgent) {
     });
   };
 
-  self.comment = function(session, thing_id, markdown) {
+  self.comment = function(thing_id, markdown) {
     return self.post(baseUrl + '/api/comment', {
       form: {
         api_type: 'json',
         text:     markdown,
         thing_id: thing_id,
-        uh:       session.modhash
+        uh:       self.session.modhash
       }
-    }, session);
+    }, self.session);
   };
 
-  self.flair = function(session, subreddit, linkName, template, flairText) {
+  self.flair = function(subreddit, linkName, template, flairText) {
     return self.post(baseUrl + '/api/flair', {
       form: {
         api_type:           'json',
@@ -70,18 +71,18 @@ function Nodewhal(userAgent) {
         r:                  subreddit,
         text:               flairText,
         css_class:          template,
-        uh:                 session.modhash
+        uh:                 self.session.modhash
       }
-    }, session)
+    }, self.session)
   };
 
-  self.aboutUser = function(session, username) {
-    return self.get(baseUrl + '/user/' + username + '/about.json', {}, session);
+  self.aboutUser = function(username) {
+    return self.get(baseUrl + '/user/' + username + '/about.json', {}, self.session);
   };
 
-  self.submitted = function(session, subreddit, url) {
+  self.submitted = function(subreddit, url) {
     url = encodeURIComponent(url);
-    return self.get(baseUrl + '/r/' + subreddit + '/submit.json?url=' + url, {}, session);
+    return self.get(baseUrl + '/r/' + subreddit + '/submit.json?url=' + url, {}, self.session);
   };
 
   self.checkForShadowban = function(username) {
@@ -107,7 +108,7 @@ function Nodewhal(userAgent) {
     });
   };
 
-  self.listing = function(session, listingPath, options) {
+  self.listing = function(listingPath, options) {
     var url = baseUrl + listingPath + '.json',
         options = options || {},
         max = options.max,
@@ -116,7 +117,7 @@ function Nodewhal(userAgent) {
     if (after) {
       url += '?limit=' + limit + '&after=' + after;
     }
-    return self.get(url, {}, session).then(function(listing) {
+    return self.get(url, {}, self.session).then(function(listing) {
       var results = {}, resultsLength;
       if (listing && listing.data && listing.data.children && listing.data.children.length) {
         listing.data.children.forEach(function(submission) {
@@ -132,7 +133,7 @@ function Nodewhal(userAgent) {
             max = max - resultsLength;
           }
           return schedule.wait(options.wait).then(function() {
-            return self.listing(session, listingPath, {
+            return self.listing(self.session, listingPath, {
               max: max,
               after: listing.data.after,
               wait: options.wait
@@ -152,14 +153,18 @@ function Nodewhal(userAgent) {
     });
   };
 
-  self.byId = function (session, ids) {
-    var converted_ids = [];
-    for (var i in ids) {
-      converted_ids.push("t3_" + ids[i]);
-      console.log(ids[i]);
-    }
-    var url = baseUrl + "/by_id/" + converted_ids.join(",") + '/.json';
-    return self.get(url, {}, session).then(function (listing) {
+  self.byId = function (ids) {
+    ids = ids.map(function(id) {
+      if (id.substr(0,3) == "t3_") {
+        return id
+      }
+      else {
+        return "t3_" + id;
+      }
+    });
+    console.log("Fetching submissions.");
+    var url = baseUrl + "/by_id/" + ids.join(",") + '/.json';
+    return self.get(url, {}, self.session).then(function (listing) {
       var results = {}, resultsLength;
       if (listing && listing.data && listing.data.children && listing.data.children.length) {
         listing.data.children.forEach(function (submission) {
@@ -172,22 +177,19 @@ function Nodewhal(userAgent) {
 
   };
 
-  self.byName = function(session, names) {
-  }
-
-  self.get = function(url, opts, session) {
-    return self.req(url, 'get', opts, session);
+  self.get = function(url, opts) {
+    return self.req(url, 'get', opts, self.session);
   };
 
-  self.post = function(url, opts, session) {
-    return self.req(url, 'post', opts, session);
+  self.post = function(url, opts) {
+    return self.req(url, 'post', opts, self.session);
   };
 
-  self.req = function(url, method, opts, session) {
+  self.req = function(url, method, opts) {
     return Nodewhal.respectRateLimits(method, url).then(function() {
       opts = opts || {};
-      if (session && session.cookieJar) {
-        opts.jar = session.cookieJar;
+      if (self.session && self.session.cookieJar) {
+        opts.jar = self.session.cookieJar;
       }
       opts.headers = opts.headers || {};
       opts.headers['User-Agent'] = userAgent;
@@ -214,15 +216,15 @@ function Nodewhal(userAgent) {
 
 Nodewhal.schedule = schedule;
 
-Nodewhal.rsvpRequest = function(method, url, opts) {
-  return new RSVP.Promise(function(resolve, reject) {
+Nodewhal.rsvpRequest = function (method, url, opts) {
+  return new RSVP.Promise(function (resolve, reject) {
     console.log('requesting', url);
     if (!method || method === 'get') {
       method = request;
     } else {
       method = request[method];
     }
-    method(url, opts, function(error, response, body) {
+    method(url, opts, function (error, response, body) {
       if (error) {
         reject(error);
       } else {
@@ -230,7 +232,7 @@ Nodewhal.rsvpRequest = function(method, url, opts) {
       }
     });
   });
-}
+};
 
 Nodewhal.respectRateLimits = function (method, url) {
   return new RSVP.Promise(function(resolve, reject) {
