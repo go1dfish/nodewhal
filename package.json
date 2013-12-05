@@ -1,6 +1,6 @@
 {
   "name": "nodewhal",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Node.js reddit API wrapper that relies heavily on RSVP promises",
   "main": "nodewhal.js",
   "scripts": {
@@ -15,7 +15,12 @@
     "request":  "2.27.0"
   },
   "author": "go1dfish",
-  "license": "BSD-2-Clause",
+  "licenses": [
+    {
+      "type": "WTFPL",
+      "url": "https://github.com/go1dfish/nodewhal/blob/master/LICENSE"
+    }
+  ],
   "bugs": {
     "url": "https://github.com/go1dfish/nodewhal/issues"
   },
