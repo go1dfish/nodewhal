@@ -193,6 +193,9 @@ function Nodewhal(userAgent) {
   };
 
   self.byId = function (ids) {
+    if (typeof ids == "string") {
+      ids = [ids]
+    }
     ids = ids.map(function (id) {
       if (id.substr(0, 3) == "t3_") {
         return id
@@ -201,6 +204,7 @@ function Nodewhal(userAgent) {
         return "t3_" + id;
       }
     });
+
     console.log("Fetching submissions.");
     var url = baseUrl + "/by_id/" + ids.join(",") + '/.json';
     return self.get(url, {}).then(function (listing) {
@@ -211,8 +215,7 @@ function Nodewhal(userAgent) {
         });
       }
       return results;
-    });
-
+    })
   };
 
   self.get = function (url, opts) {
