@@ -25,7 +25,7 @@ var schedule = module.exports = {
     });
   },
 
-  runInSerial: function(promiseFunctions, interval) {
+  runInSeries: function (promiseFunctions, interval) {
     promiseFunctions = (promiseFunctions || []).slice(0);
     return new RSVP.Promise(function(resolve, reject) {
       var results = [];
@@ -44,8 +44,8 @@ var schedule = module.exports = {
               if (error.stack) {
                 console.error(error.stack);
               }
-              runNext();
-            });
+                return runNext();
+              });
           }
           return results;
         });

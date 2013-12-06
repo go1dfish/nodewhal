@@ -179,6 +179,7 @@ function Nodewhal(userAgent) {
       }
     }
     else {
+
       self.es.onmessage = function (e) {
         self.newSubmissions.push(e.data);
       };
@@ -205,17 +206,44 @@ function Nodewhal(userAgent) {
       }
     });
 
-    console.log("Fetching submissions.");
-    var url = baseUrl + "/by_id/" + ids.join(",") + '/.json';
-    return self.get(url, {}).then(function (listing) {
-      var results = {};
-      if (listing && listing.data && listing.data.children && listing.data.children.length) {
-        listing.data.children.forEach(function (submission) {
-          results[submission.data.name] = submission.data;
-        });
+    var fetch_ids_wrapper = function (u) {
+      var url = u;
+      return function () {
+        return self.get(url, {}).then(function (listing) {
+          var results = {};
+          if (listing && listing.data && listing.data.children && listing.data.children.length) {
+            listing.data.children.forEach(function (submission) {
+              results[submission.data.name] = submission.data;
+            });
+          }
+          return results;
+        })
       }
-      return results;
-    })
+    };
+    console.log("Fetching submissions.");
+    if (ids.length <= 5) {
+      var url = baseUrl + "/by_id/" + ids.join(",") + '/.json';
+      return fetch_ids_wrapper(url)();
+    }
+    else {
+      var promises = [];
+
+      for (var i = 0; i < Math.ceil((ids.length + 1) / 100); i++) {
+        u = baseUrl + "/by_id/" + ids.slice(0 + (i * 100), 100 + (i * 100)).join(",") + '/.json';
+        promises.push(fetch_ids_wrapper(u))
+      }
+      return schedule.runInSeries(promises).then(function (resultList) {
+        var results = {};
+        resultList.forEach(function (element, index, array) {
+          for (attrname in element) {
+            results[attrname] = element[attrname];
+          }
+        });
+        return results;
+      });
+
+    }
+
   };
 
   self.get = function (url, opts) {
@@ -313,3 +341,5 @@ Nodewhal.respectRateLimits = function (method, url) {
 };
 
 module.exports = Nodewhal;
+
+x = new Nodewhal("Nodewhal dev client");
