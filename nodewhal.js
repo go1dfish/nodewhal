@@ -13,9 +13,12 @@ function Nodewhal(userAgent) {
   if (!userAgent) {
     userAgent = 'noob-nodewhal-dev-soon-to-be-ip-banned';
   }
+  self.session = {
+    cookieJar: request.jar()
+  };
+
   self.newSubmissions = [];
   self.login = function (username, password) {
-    var cookieJar = request.jar();
     return self.post(baseUrl + '/api/login', {
       form: {
         api_type: 'json',
@@ -23,11 +26,12 @@ function Nodewhal(userAgent) {
         rem: true,
         user: username
       }
-    }, {cookieJar: cookieJar}).then(function (data) {
-        self.session = data.json.data;
-        self.session.cookieJar = cookieJar;
-        return self;
+    }).then(function (data) {
+      Object.keys(data.json.data).forEach(function(key) {
+        self.session[key] = data.json.data[key];
       });
+      return self;
+    });
   };
 
   self.submit = function (subreddit, kind, title, urlOrText) {
@@ -160,6 +164,9 @@ function Nodewhal(userAgent) {
 
   self.startSubmissionStream = function (cb, subreddit, author, domain, is_self) {
     url = "http://api.rednit.com/submission_stream?eventsource=true";
+    if (subreddit && subreddit.length) {
+      subreddit = subreddit.join('+');
+    }
     if (subreddit) {
       url += "&subreddit=" + subreddit;
     }
@@ -172,16 +179,17 @@ function Nodewhal(userAgent) {
     if (is_self) {
       url += "&is_self=" + is_self;
     }
+    console.log('stream start:', url);
     self.es = new EventSource(url);
     if (cb != null) {
       self.es.onmessage = function (e) {
-        cb(e.data);
+        cb(JSON.parse(e.data));
       }
     }
     else {
 
       self.es.onmessage = function (e) {
-        self.newSubmissions.push(e.data);
+        self.newSubmissions.push(JSON.parse(e.data));
       };
       self.es.onerror = function () {
         console.log("Error in the submission stream.");
@@ -264,24 +272,22 @@ function Nodewhal(userAgent) {
       opts.headers['User-Agent'] = userAgent;
       return Nodewhal.rsvpRequest(method, url, opts);
     }).then(function (body) {
-        var json;
-        try {
-          json = JSON.parse(body);
-        } catch (e) {
-          console.error('Cant parse', body);
-          throw e;
-        }
-        if (json && json.error) {
-          console.log('error', json);
-          throw json.error;
-        }
-        return json;
-      }, function (error) {
-        if (error.stack) {
-          console.error(error.stack);
-        }
-        throw error;
-      });
+      var json;
+      try {
+        json = JSON.parse(body);
+      } catch (e) {
+        console.error('Cant parse', body);
+        throw e;
+      }
+      if (json && json.error) {
+        console.log('error', json);
+        throw json.error;
+      }
+      return json;
+    }, function (error) {
+      console.error(error.stack || error);
+      throw error;
+    });
   };
 }
 

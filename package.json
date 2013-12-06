@@ -1,6 +1,6 @@
 {
   "name": "nodewhal",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Node.js reddit API wrapper that relies heavily on RSVP promises",
   "main": "nodewhal.js",
   "scripts": {
@@ -11,6 +11,7 @@
     "url": "https://github.com/go1dfish/nodewhal.git"
   },
   "dependencies": {
+    "eventsource": "0.0.10",
     "rsvp":     "2.0.4",
     "request":  "2.27.0"
   },
