@@ -123,8 +123,9 @@ function Nodewhal(userAgent) {
       max = options.max,
       after = options.after,
       limit = max || 100;
+    url += '?limit=' + limit;
     if (after) {
-      url += '?limit=' + limit + '&after=' + after;
+      url += '&after=' + after;
     }
     return self.get(url, {}).then(function (listing) {
       var results = {}, resultsLength;
@@ -202,8 +203,10 @@ function Nodewhal(userAgent) {
   };
 
   self.byId = function (ids) {
+    var isSingle = false;
     if (typeof ids == "string") {
-      ids = [ids]
+      ids = [ids];
+      isSingle = true;
     }
     ids = ids.map(function (id) {
       if (id.substr(0, 3) == "t3_") {
@@ -220,15 +223,18 @@ function Nodewhal(userAgent) {
         return self.get(url, {}).then(function (listing) {
           var results = {};
           if (listing && listing.data && listing.data.children && listing.data.children.length) {
+            if (isSingle) {
+              return listing.data.children[0].data;
+            }
             listing.data.children.forEach(function (submission) {
               results[submission.data.name] = submission.data;
             });
           }
+          console.error(isSingle, results);
           return results;
-        })
-      }
+        });
+      };
     };
-    console.log("Fetching submissions.");
     if (ids.length <= 5) {
       var url = baseUrl + "/by_id/" + ids.join(",") + '/.json';
       return fetch_ids_wrapper(url)();
