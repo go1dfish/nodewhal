@@ -47,6 +47,7 @@ var schedule = module.exports = {
               runNext();
             });
           }
+          return results;
         });
       }
       resolve(runNext())
