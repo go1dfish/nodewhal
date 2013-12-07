@@ -5,14 +5,12 @@ var request = require('request'),
   baseUrl = 'http://www.reddit.com',
   knownShadowbans = {},
   lastRedditRequestTimeByUrl = {},
-  lastRedditRequestTime;
+  lastRedditRequestTime,
+  defaultUserAgent = 'noob-nodewhal-dev-soon-to-be-ip-banned';
 
 function NodewhalSession(userAgent) {
   var self = this;
-
-  if (!userAgent) {
-    userAgent = 'noob-nodewhal-dev-soon-to-be-ip-banned';
-  }
+  self.userAgent = userAgent || defaultUserAgent;
   self.session = {
     cookieJar: request.jar()
   };
@@ -27,11 +25,14 @@ function NodewhalSession(userAgent) {
         user: username
       }
     }).then(function (data) {
-      Object.keys(data.json.data).forEach(function(key) {
-        self.session[key] = data.json.data[key];
+        if (data && data.json && data.json.errors && data.json.errors.length) {
+          throw data.json.errors;
+        }
+        Object.keys(data.json.data).forEach(function (key) {
+          self.session[key] = data.json.data[key];
+        });
+        return self;
       });
-      return self;
-    });
   };
 
   self.submit = function (subreddit, kind, title, urlOrText) {
@@ -129,7 +130,7 @@ function NodewhalSession(userAgent) {
       options = options || {},
       max = options.max,
       after = options.after,
-      limit = max || 100;
+      limit = 100; //I see no reason that this should ever be less than 100.
     url += '?limit=' + limit;
     if (after) {
       url += '&after=' + after;
@@ -141,6 +142,7 @@ function NodewhalSession(userAgent) {
           results[submission.data.name] = submission.data;
         });
         resultsLength = Object.keys(results).length;
+        console.log("Length:", resultsLength);
 
         if (
           listing.data.after &&
@@ -237,29 +239,32 @@ function NodewhalSession(userAgent) {
               results[submission.data.name] = submission.data;
             });
           }
-          console.error(isSingle, results);
           return results;
         });
       };
     };
-    if (ids.length <= 5) {
+    if (ids.length <= 100) {
       var url = baseUrl + "/by_id/" + ids.join(",") + '/.json';
       return fetch_ids_wrapper(url)();
     }
     else {
       var promises = [];
 
-      for (var i = 0; i < Math.ceil((ids.length + 1) / 100); i++) {
-        u = baseUrl + "/by_id/" + ids.slice(0 + (i * 100), 100 + (i * 100)).join(",") + '/.json';
-        promises.push(fetch_ids_wrapper(u))
+      for (var i = 0; i < (ids.length + 100); i += 100) {
+        if (ids.slice(i, i + 101).length > 0) {
+          u = baseUrl + "/by_id/" + ids.slice(i, i + 101).join(",") + '/.json?limit=100';
+          promises.push(fetch_ids_wrapper(u))
+        }
       }
       return schedule.runInSeries(promises).then(function (resultList) {
         var results = {};
+        var len = 0;
         resultList.forEach(function (element, index, array) {
           for (attrname in element) {
             results[attrname] = element[attrname];
           }
         });
+
         return results;
       });
 
@@ -282,25 +287,25 @@ function NodewhalSession(userAgent) {
         opts.jar = self.session.cookieJar;
       }
       opts.headers = opts.headers || {};
-      opts.headers['User-Agent'] = userAgent;
+      opts.headers['User-Agent'] = self.userAgent;
       return Nodewhal.rsvpRequest(method, url, opts);
     }).then(function (body) {
-      var json;
-      try {
-        json = JSON.parse(body);
-      } catch (e) {
-        console.error('Cant parse', body);
-        throw e;
-      }
-      if (json && json.error) {
-        console.log('error', json);
-        throw json.error;
-      }
-      return json;
-    }, function (error) {
-      console.error(error.stack || error);
-      throw error;
-    });
+        var json;
+        try {
+          json = JSON.parse(body);
+        } catch (e) {
+          console.error('Cant parse', body);
+          throw e;
+        }
+        if (json && json.error) {
+          console.log('error', json);
+          throw Error(json.error);
+        }
+        return json;
+      }, function (error) {
+        console.error(error.stack || error);
+        throw error;
+      });
   };
 }
 
@@ -363,5 +368,3 @@ Nodewhal.respectRateLimits = function (method, url) {
 };
 
 module.exports = Nodewhal;
-
-x = new Nodewhal("Nodewhal dev client");

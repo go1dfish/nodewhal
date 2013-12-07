@@ -15,6 +15,12 @@
     "rsvp":     "2.0.4",
     "request":  "2.27.0"
   },
+  "devDependencies": {
+    "chai": "1.8.1",
+    "chai-as-promised": "4.1.x",
+    "mocha": "1.15.x",
+    "mocha-as-promised": "1.4.x"
+  },
   "author": "go1dfish",
   "licenses": [
     {
