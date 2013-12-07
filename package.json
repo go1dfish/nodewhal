@@ -1,6 +1,6 @@
 {
   "name": "nodewhal",
-  "version": "0.0.3",
+  "version": "0.1.0",
   "description": "Node.js reddit API wrapper that relies heavily on RSVP promises",
   "main": "nodewhal.js",
   "scripts": {

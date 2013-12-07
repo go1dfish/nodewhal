@@ -4,16 +4,15 @@ Node.js reddit API wrapper that relies heavily on RSVP promises
 
 ## Usage
 
-    var Nodewhal = require('nodewhal'),
-        reddit = new Nodewhal('my-cool-user-agent');
+    var Nodewhal = require('nodewhal');
 
-    reddit.login('yishan', 'hunter2').then(function(session) {
-      return reddit.listing(session, '/r/POLITIC/new').then(function(posts) {
-        return reddit.submit(session, 'POLITIC', 'link',
+    Nodewhal('my-cool-user-agent').login('kn0thing', 'hunter2').then(function(kn0thing) {
+      return kn0thing.listing(session, '/r/POLITIC/new').then(function(posts) {
+        return kn0thing.submit('POLITIC', 'link',
           "The Downing Street Memo",
           "http://www.downingstreetmemo.com"
         ).then(function(submission) {
-          return reddit.flair(session, 'POLITIC', submission.name ,
+          return kn0thing.flair('POLITIC', submission.name ,
             'flairclass', 'First Post!'
           ).then(function() {return submission;});
         });

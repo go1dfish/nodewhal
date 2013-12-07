@@ -7,7 +7,7 @@ var request = require('request'),
   lastRedditRequestTimeByUrl = {},
   lastRedditRequestTime;
 
-function Nodewhal(userAgent) {
+function NodewhalSession(userAgent) {
   var self = this;
 
   if (!userAgent) {
@@ -92,6 +92,13 @@ function Nodewhal(userAgent) {
   self.submitted = function (subreddit, url) {
     url = encodeURIComponent(url);
     return self.get(baseUrl + '/r/' + subreddit + '/submit.json?url=' + url, {});
+  };
+
+  self.duplicates = function (subreddit, id) {
+    if (id.indexOf('_') !== -1) {
+      id = id.split('_')[1];
+    }
+    return self.get(baseUrl + '/r/' + subreddit + '/duplicates/' + id + '/_/.json');
   };
 
   self.checkForShadowban = function (username) {
@@ -297,6 +304,9 @@ function Nodewhal(userAgent) {
   };
 }
 
+function Nodewhal(userAgent) {
+  return new NodewhalSession(userAgent);
+}
 
 Nodewhal.schedule = schedule;
 
