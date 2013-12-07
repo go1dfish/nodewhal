@@ -48,7 +48,7 @@
         non_existent_user = "joishvcshuifndsalkju904j3wmkwlatgf";
         shadowbanned_user = "FUCKpepsi_next";
         it("Should return user-information properly for a real user.", function () {
-          return nw.aboutUser(valid_user).should.eventually.have.deep.property("data.name", valid_user);
+          return nw.aboutUser(valid_user).should.eventually.have.deep.property("name", valid_user);
         });
         it("Should return an error for a user that doesn't exist.", function () {
           return nw.aboutUser(non_existent_user).should.eventually.be.rejectedWith(404);

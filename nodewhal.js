@@ -87,7 +87,11 @@ function NodewhalSession(userAgent) {
   };
 
   self.aboutUser = function (username) {
-    return self.get(baseUrl + '/user/' + username + '/about.json', {});
+    return self.get(
+        baseUrl + '/user/' + username + '/about.json'
+      ).then(function (json) {
+        return json.data;
+      });
   };
 
   self.submitted = function (subreddit, url) {
@@ -130,8 +134,12 @@ function NodewhalSession(userAgent) {
       options = options || {},
       max = options.max,
       after = options.after,
-      limit = 100; //I see no reason that this should ever be less than 100.
-    url += '?limit=' + limit;
+      limit = max || 100;
+    if (url.indexOf('?') < 0) {
+      url += '?limit=' + limit;
+    } else {
+      url += '&limit=' + limit;
+    }
     if (after) {
       url += '&after=' + after;
     }
