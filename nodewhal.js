@@ -86,7 +86,11 @@ function NodewhalSession(userAgent) {
   };
 
   self.aboutUser = function (username) {
-    return self.get(baseUrl + '/user/' + username + '/about.json', {});
+    return self.get(
+      baseUrl + '/user/' + username + '/about.json'
+    ).then(function(json) {
+      return json.data;
+    });
   };
 
   self.submitted = function (subreddit, url) {
@@ -130,7 +134,11 @@ function NodewhalSession(userAgent) {
       max = options.max,
       after = options.after,
       limit = max || 100;
-    url += '?limit=' + limit;
+    if (url.indexOf('?') < 0) {
+      url += '?limit=' + limit;
+    } else {
+      url += '&limit=' + limit;
+    }
     if (after) {
       url += '&after=' + after;
     }
@@ -144,8 +152,8 @@ function NodewhalSession(userAgent) {
 
         if (
           listing.data.after &&
-            (typeof max === 'undefined' || resultsLength < max)
-          ) {
+          (typeof max === 'undefined' || resultsLength < max)
+        ) {
           if (!typeof max === 'undefined') {
             max = max - resultsLength;
           }
@@ -237,7 +245,6 @@ function NodewhalSession(userAgent) {
               results[submission.data.name] = submission.data;
             });
           }
-          console.error(isSingle, results);
           return results;
         });
       };
