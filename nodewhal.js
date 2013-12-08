@@ -45,7 +45,6 @@ function NodewhalSession(userAgent) {
       sr: subreddit,
       uh: self.session.modhash
     };
-    console.log('Submitting', urlOrText);
     if (kind === 'self' || !urlOrText) {
       form.text = urlOrText;
     } else {
@@ -135,6 +134,7 @@ function NodewhalSession(userAgent) {
       max = options.max,
       after = options.after,
       limit = max || 100;
+    if (limit > 100) {limit = 100;}
     if (url.indexOf('?') < 0) {
       url += '?limit=' + limit;
     } else {
@@ -147,14 +147,16 @@ function NodewhalSession(userAgent) {
       var results = {}, resultsLength;
       if (listing && listing.data && listing.data.children && listing.data.children.length) {
         listing.data.children.forEach(function (submission) {
-          results[submission.data.name] = submission.data;
+          resultsLength = Object.keys(results).length;
+          if (!max || resultsLength < max) {
+            results[submission.data.name] = submission.data;
+          }
         });
-        resultsLength = Object.keys(results).length;
-        console.log("Length:", resultsLength);
+        //console.log("Length:", resultsLength);
 
         if (
           listing.data.after &&
-            (typeof max === 'undefined' || resultsLength < max)
+            (typeof max === 'undefined' || resultsLength + 1 < max)
           ) {
           if (!typeof max === 'undefined') {
             max = max - resultsLength;
@@ -302,7 +304,7 @@ function NodewhalSession(userAgent) {
         try {
           json = JSON.parse(body);
         } catch (e) {
-          console.error('Cant parse', body);
+          console.error('Cant parse', url, method, opts,  body);
           throw e;
         }
         if (json && json.error) {
@@ -325,7 +327,11 @@ Nodewhal.schedule = schedule;
 
 Nodewhal.rsvpRequest = function (method, url, opts) {
   return new RSVP.Promise(function (resolve, reject) {
-    console.log('requesting', url);
+    if (url.indexOf('api/login') === -1 && method === 'post') {
+      console.log(method, url, JSON.stringify(opts.form));
+    } else {
+      console.log(method, url);
+    }
     if (!method || method === 'get') {
       method = request;
     } else {

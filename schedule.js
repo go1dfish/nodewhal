@@ -36,16 +36,28 @@ var schedule = module.exports = {
 
       function runNext() {
         return schedule.wait(interval).then(function() {
-          var func = promiseFunctions.pop();
-          if (func) {
-            return func().then(function(result) {
-              results.push(result);
-            }).then(runNext, function(error) {
-              if (error.stack) {
-                console.error(error.stack);
-              }
-                return runNext();
-              });
+          var func = promiseFunctions.pop(), promise;
+          if (func && (func.call || func.then)) {
+            if (!func.call) {
+              promise = func;
+              func  = function() {return promise;};
+            }
+            var result = func();
+            if (result && result.then) {
+              return result.then(function(result) {
+                results.push(result);
+              }).then(runNext, function(error) {
+                if (error.stack) {
+                  console.error(error.stack);
+                }
+                  return runNext();
+                });
+            } else {
+              console.error('Result of ', func, 'is not a promise', result);
+              return runNext();
+            }
+          } else if (func) {
+            console.error('Not a function or promise', func);
           }
           return results;
         });
