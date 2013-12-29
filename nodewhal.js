@@ -107,11 +107,11 @@ function NodewhalSession(userAgent) {
 
   self.checkForShadowban = function (username) {
     var url = baseUrl + '/user/' + username;
-    return Nodewhal.respectRateLimits('get', url).then(function () {
-      return new RSVP.Promise(function (resolve, reject) {
-        if (knownShadowbans[username]) {
-          return resolve('shadowban');
-        }
+    return new RSVP.Promise(function (resolve, reject) {
+      if (knownShadowbans[username]) {
+        return reject('shadowban');
+      }
+      Nodewhal.respectRateLimits('get', url).then(function () {
         request(url, {}, function (error, response, body) {
           if (error) {
             reject(error);
