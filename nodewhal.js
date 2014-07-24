@@ -35,7 +35,7 @@ function NodewhalSession(userAgent) {
       });
   };
 
-  self.submit = function (subreddit, kind, title, urlOrText) {
+  self.submit = function (subreddit, kind, title, urlOrText, resubmit) {
     urlOrText = urlOrText || '';
     kind = (kind || 'link').toLowerCase();
     var form = {
@@ -43,6 +43,7 @@ function NodewhalSession(userAgent) {
       kind: kind,
       title: title,
       sr: subreddit,
+      resubmit: resubmit,
       uh: self.session.modhash
     };
     if (kind === 'self' || !urlOrText) {
@@ -96,6 +97,18 @@ function NodewhalSession(userAgent) {
   self.submitted = function (subreddit, url) {
     url = encodeURIComponent(url);
     return self.get(baseUrl + '/r/' + subreddit + '/submit.json?url=' + url, {});
+  };
+
+  self.moderated = function() {
+    return self.get(baseUrl + '/subreddits/mine/moderator.json').then(function(json) {
+      return json.data.children.map(function(child) {return child.data;});
+    });
+  };
+
+  self.modlog = function(name) {
+    return self.get(baseUrl + '/r/' + name + '/about/log.json').then(function(json) {
+      return json.data.children.map(function(child) {return child.data;});
+    });
   };
 
   self.duplicates = function (subreddit, id) {
