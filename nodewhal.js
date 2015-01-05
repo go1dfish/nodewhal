@@ -11,6 +11,7 @@ var request = require('request'),
 function NodewhalSession(userAgent) {
   var self = this;
   self.userAgent = userAgent || defaultUserAgent;
+  self.streamUrl = "http://api.rednit.com/submission_stream?eventsource=true";
   self.session = {
     cookieJar: request.jar()
   };
@@ -92,6 +93,12 @@ function NodewhalSession(userAgent) {
       ).then(function (json) {
         return json.data;
       });
+  };
+
+  self.comments = function(permalink) {
+    return self.get(baseUrl+permalink + '.json').then(function(json) {
+      return json[1].data.children;
+    });
   };
 
   self.submitted = function (subreddit, url) {
@@ -196,7 +203,7 @@ function NodewhalSession(userAgent) {
   };
 
   self.startSubmissionStream = function (cb, subreddit, author, domain, is_self) {
-    url = "http://api.rednit.com/submission_stream?eventsource=true";
+    var url = self.streamUrl;
     if (subreddit && subreddit.length) {
       subreddit = subreddit.join('+');
     }
@@ -256,7 +263,8 @@ function NodewhalSession(userAgent) {
           var results = {};
           if (listing && listing.data && listing.data.children && listing.data.children.length) {
             if (isSingle) {
-              return listing.data.children[0].data;
+              var result = listing.data.children[0].data;
+              return result;
             }
             listing.data.children.forEach(function (submission) {
               results[submission.data.name] = submission.data;
