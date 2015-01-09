@@ -89,10 +89,13 @@ function NodewhalSession(userAgent) {
 
   self.aboutUser = function (username) {
     return self.get(
-        baseUrl + '/user/' + username + '/about.json'
-      ).then(function (json) {
-        return json.data;
-      });
+      baseUrl + '/user/' + username + '/about.json'
+    ).then(function (json) {return json.data;}, function(error) {
+      if ((error + "").match(/404/)) {
+        throw 'usermissing';
+      }
+      throw error;
+    });
   };
 
   self.comments = function(permalink) {
@@ -312,24 +315,23 @@ function NodewhalSession(userAgent) {
   };
 
   self.req = function (url, method, opts) {
-    return Nodewhal.respectRateLimits(method, url).then(function () {
-      opts = opts || {};
-      if (self.session && self.session.cookieJar) {
-        opts.jar = self.session.cookieJar;
-      }
-      opts.headers = opts.headers || {};
-      opts.headers['User-Agent'] = self.userAgent;
-      return Nodewhal.rsvpRequest(method, url, opts);
-    }).then(function (body) {
+    return schedule.retry(function() {
+      return Nodewhal.respectRateLimits(method, url).then(function () {
+        opts = opts || {};
+        if (self.session && self.session.cookieJar) {
+          opts.jar = self.session.cookieJar;
+        }
+        opts.headers = opts.headers || {};
+        opts.headers['User-Agent'] = self.userAgent;
+        return Nodewhal.rsvpRequest(method, url, opts);
+      }).then(function (body) {
         var json;
         try {
           json = JSON.parse(body);
         } catch (e) {
-          console.error('Cant parse', url, method, opts,  body);
-          throw e;
+          throw "Parse error";
         }
         if (json && json.error) {
-          console.log('error', json);
           throw Error(json.error);
         }
         return json;
@@ -337,7 +339,13 @@ function NodewhalSession(userAgent) {
         console.error(error.stack || error);
         throw error;
       });
-  };
+    }, function(err) {
+      if ((err + "").match(/(Parse error|TIMEOUT)/)) {
+        console.error("retry", method, url, err);
+        return true;
+      }
+    });
+ };
 }
 
 function Nodewhal(userAgent) {

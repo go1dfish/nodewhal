@@ -12,6 +12,15 @@ var schedule = module.exports = {
     });
   },
 
+  retry: function(f, shouldRetry) {
+    return f().then(undefined, function (err) {
+      if (shouldRetry(err)) {
+        return schedule.retry(f, shouldRetry);
+      }
+      throw err;
+    });
+  },
+
   runInParallel: function(promiseFunctions) {
     return new RSVP.Promise(function(resolve, reject) {
       RSVP.all(promiseFunctions.map(function(func) {
