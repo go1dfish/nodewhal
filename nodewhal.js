@@ -2,7 +2,6 @@ var request = require('request'),
   RSVP = require('rsvp'),
   schedule = require('./schedule'),
   EventSource = require('eventsource'),
-  baseUrl = 'http://www.reddit.com',
   knownShadowbans = {},
   lastRedditRequestTimeByUrl = {},
   lastRedditRequestTime,
@@ -11,6 +10,7 @@ var request = require('request'),
 function NodewhalSession(userAgent) {
   var self = this;
   self.userAgent = userAgent || defaultUserAgent;
+  self.baseUrl = 'http://www.reddit.com';
   self.streamUrl = "http://api.rednit.com/submission_stream?eventsource=true";
   self.session = {
     cookieJar: request.jar()
@@ -18,7 +18,7 @@ function NodewhalSession(userAgent) {
 
   self.newSubmissions = [];
   self.login = function (username, password) {
-    return self.post(baseUrl + '/api/login', {
+    return self.post(self.baseUrl + '/api/login', {
       form: {
         api_type: 'json',
         passwd: password,
@@ -52,7 +52,7 @@ function NodewhalSession(userAgent) {
     } else {
       form.url = urlOrText;
     }
-    return self.post(baseUrl + '/api/submit', {form: form}).then(function (data) {
+    return self.post(self.baseUrl + '/api/submit', {form: form}).then(function (data) {
       if (data && data.json && data.json.errors && data.json.errors.length) {
         throw data.json.errors;
       }
@@ -64,7 +64,18 @@ function NodewhalSession(userAgent) {
   };
 
   self.comment = function (thing_id, markdown) {
-    return self.post(baseUrl + '/api/comment', {
+    return self.post(self.baseUrl + '/api/comment', {
+      form: {
+        api_type: 'json',
+        text: markdown,
+        thing_id: thing_id,
+        uh: self.session.modhash
+      }
+    });
+  };
+
+  self.editusertext = function (thing_id, markdown) {
+    return self.post(self.baseUrl + '/api/editusertext', {
       form: {
         api_type: 'json',
         text: markdown,
@@ -75,7 +86,7 @@ function NodewhalSession(userAgent) {
   };
 
   self.flair = function (subreddit, linkName, template, flairText) {
-    return self.post(baseUrl + '/api/flair', {
+    return self.post(self.baseUrl + '/api/flair', {
       form: {
         api_type: 'json',
         link: linkName,
@@ -89,7 +100,7 @@ function NodewhalSession(userAgent) {
 
   self.aboutUser = function (username) {
     return self.get(
-      baseUrl + '/user/' + username + '/about.json'
+      self.baseUrl + '/user/' + username + '/about.json'
     ).then(function (json) {return json.data;}, function(error) {
       if ((error + "").match(/404/)) {
         throw 'usermissing';
@@ -99,24 +110,30 @@ function NodewhalSession(userAgent) {
   };
 
   self.comments = function(permalink) {
-    return self.get(baseUrl+permalink + '.json').then(function(json) {
+    return self.get(self.baseUrl+permalink + '.json').then(function(json) {
       return json[1].data.children;
     });
   };
 
   self.submitted = function (subreddit, url) {
     url = encodeURIComponent(url);
-    return self.get(baseUrl + '/r/' + subreddit + '/submit.json?url=' + url, {});
+    return self.get(self.baseUrl + '/r/' + subreddit + '/submit.json?url=' + url, {});
+  };
+
+  self.mentions = function() {
+    return self.get(self.baseUrl + '/message/mentions.json').then(function(json) {
+      return json.data.children.map(function(child) {return child.data;});
+    });
   };
 
   self.moderated = function() {
-    return self.get(baseUrl + '/subreddits/mine/moderator.json').then(function(json) {
+    return self.get(self.baseUrl + '/subreddits/mine/moderator.json').then(function(json) {
       return json.data.children.map(function(child) {return child.data;});
     });
   };
 
   self.modlog = function(name) {
-    return self.get(baseUrl + '/r/' + name + '/about/log.json').then(function(json) {
+    return self.get(self.baseUrl + '/r/' + name + '/about/log.json').then(function(json) {
       return json.data.children.map(function(child) {return child.data;});
     });
   };
@@ -125,11 +142,11 @@ function NodewhalSession(userAgent) {
     if (id.indexOf('_') !== -1) {
       id = id.split('_')[1];
     }
-    return self.get(baseUrl + '/r/' + subreddit + '/duplicates/' + id + '/_/.json');
+    return self.get(self.baseUrl + '/r/' + subreddit + '/duplicates/' + id + '/_/.json');
   };
 
   self.checkForShadowban = function (username) {
-    var url = baseUrl + '/user/' + username;
+    var url = self.baseUrl + '/user/' + username;
     return new RSVP.Promise(function (resolve, reject) {
       if (knownShadowbans[username]) {
         return reject('shadowban');
@@ -152,7 +169,7 @@ function NodewhalSession(userAgent) {
   };
 
   self.listing = function (listingPath, options) {
-    var url = baseUrl + listingPath + '.json',
+    var url = self.baseUrl + listingPath + '.json',
       options = options || {},
       max = options.max,
       after = options.after,
@@ -278,7 +295,7 @@ function NodewhalSession(userAgent) {
       };
     };
     if (ids.length <= 100) {
-      var url = baseUrl + "/by_id/" + ids.join(",") + '/.json';
+      var url = self.baseUrl + "/by_id/" + ids.join(",") + '/.json';
       return fetch_ids_wrapper(url)();
     }
     else {
@@ -286,7 +303,7 @@ function NodewhalSession(userAgent) {
 
       for (var i = 0; i < (ids.length + 100); i += 100) {
         if (ids.slice(i, i + 101).length > 0) {
-          u = baseUrl + "/by_id/" + ids.slice(i, i + 101).join(",") + '/.json?limit=100';
+          u = self.baseUrl + "/by_id/" + ids.slice(i, i + 101).join(",") + '/.json?limit=100';
           promises.push(fetch_ids_wrapper(u))
         }
       }
@@ -323,13 +340,18 @@ function NodewhalSession(userAgent) {
         }
         opts.headers = opts.headers || {};
         opts.headers['User-Agent'] = self.userAgent;
-        return Nodewhal.rsvpRequest(method, url, opts);
+        return Nodewhal.rsvpRequest(method, url.replace(/[^\x00-\x7F]/g, ""), opts);
       }).then(function (body) {
         var json;
         try {
           json = JSON.parse(body);
         } catch (e) {
-          throw "Parse error";
+          if (body.match(/try again/)) {
+            throw "Too slow";
+          } else {
+            console.error(body);
+            throw e;
+          }
         }
         if (json && json.error) {
           throw Error(json.error);
@@ -340,7 +362,7 @@ function NodewhalSession(userAgent) {
         throw error;
       });
     }, function(err) {
-      if ((err + "").match(/(Parse error|TIMEOUT)/)) {
+      if ((err + "").match(/(Too slow|TIMEOUT)/)) {
         console.error("retry", method, url, err);
         return true;
       }

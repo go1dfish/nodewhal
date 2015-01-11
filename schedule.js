@@ -12,10 +12,11 @@ var schedule = module.exports = {
     });
   },
 
-  retry: function(f, shouldRetry) {
+  retry: function(f, shouldRetry, numTries) {
+    if (!numTries) {numTries=10;}
     return f().then(undefined, function (err) {
-      if (shouldRetry(err)) {
-        return schedule.retry(f, shouldRetry);
+      if (numTries>1 && shouldRetry(err)) {
+        return schedule.retry(f, shouldRetry, numTries-1);
       }
       throw err;
     });
