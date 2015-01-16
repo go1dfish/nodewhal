@@ -9,6 +9,7 @@ var request = require('request'),
 
 function NodewhalSession(userAgent) {
   var self = this;
+  self.user = null;
   self.userAgent = userAgent || defaultUserAgent;
   self.baseUrl = 'http://www.reddit.com';
   self.streamUrl = "http://api.rednit.com/submission_stream?eventsource=true";
@@ -29,6 +30,7 @@ function NodewhalSession(userAgent) {
         if (data && data.json && data.json.errors && data.json.errors.length) {
           throw data.json.errors;
         }
+        self.user = username;
         Object.keys(data.json.data).forEach(function (key) {
           self.session[key] = data.json.data[key];
         });
@@ -346,7 +348,7 @@ function NodewhalSession(userAgent) {
         try {
           json = JSON.parse(body);
         } catch (e) {
-          if (body.match(/try again/)) {
+          if (body.match(/try again/) || body.match(/cdn was unable/)) {
             throw "Too slow";
           } else {
             console.error(body);
@@ -401,8 +403,8 @@ Nodewhal.rsvpRequest = function (method, url, opts) {
 Nodewhal.respectRateLimits = function (method, url) {
   return new RSVP.Promise(function (resolve, reject) {
     var now = new Date(),
-      minInterval = 2100,
-      minUrlInterval = 30100,
+      minInterval = 2001,
+      minUrlInterval = 30001,
       lastUrlInterval, lastUrlTime = lastRedditRequestTimeByUrl[url],
       interval = now - lastRedditRequestTime;
 
