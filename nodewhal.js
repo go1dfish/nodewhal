@@ -194,8 +194,6 @@ function NodewhalSession(userAgent) {
             results[submission.data.name] = submission.data;
           }
         });
-        //console.log("Length:", resultsLength);
-
         if (
           listing.data.after &&
             (typeof max === 'undefined' || resultsLength + 1 < max)
@@ -241,11 +239,11 @@ function NodewhalSession(userAgent) {
     if (is_self) {
       url += "&is_self=" + is_self;
     }
-    console.log('stream start:', url);
+    console.log('stream:', url);
     self.es = new EventSource(url);
     if (cb != null) {
       self.es.onmessage = function (e) {
-        cb(JSON.parse(e.data));
+        try {cb(JSON.parse(e.data));} catch(e) {console.error('stream error', e.stack);}
       }
     }
     else {
@@ -365,7 +363,7 @@ function NodewhalSession(userAgent) {
       });
     }, function(err) {
       if ((err + "").match(/(Too slow|TIMEOUT)/)) {
-        console.error("retry", method, url, err);
+        console.log("retry", method, url, err);
         return true;
       }
     });
@@ -380,10 +378,12 @@ Nodewhal.schedule = schedule;
 
 Nodewhal.rsvpRequest = function (method, url, opts) {
   return new RSVP.Promise(function (resolve, reject) {
+    console.log(method.toUpperCase(), url.replace('http://www.reddit.com', ''));
     if (url.indexOf('api/login') === -1 && method === 'post') {
-      console.log(method, url, JSON.stringify(opts.form));
+      var form = JSON.parse(JSON.stringify(opts.form)); delete form['uh'];
+      Object.keys(form).forEach(function(key) {console.log(key, form[key]);});
+      console.log('END ' + method.toUpperCase());
     } else {
-      console.log(method, url);
     }
     if (!method || method === 'get') {
       method = request;
