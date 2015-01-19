@@ -346,12 +346,9 @@ function NodewhalSession(userAgent) {
         try {
           json = JSON.parse(body);
         } catch (e) {
-          if (body.match(/try again/) || body.match(/cdn was unable/)) {
+          if (body.match(/(try again|cdn was unable|502 bad gateway)/)) {
             throw "Too slow";
-          } else {
-            console.error(body);
-            throw e;
-          }
+          } else {console.error(body); throw e;}
         }
         if (json && json.error) {
           throw Error(json.error);
