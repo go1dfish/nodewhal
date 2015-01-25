@@ -346,7 +346,7 @@ function NodewhalSession(userAgent) {
         try {
           json = JSON.parse(body);
         } catch (e) {
-          if (body.match(/(try again|cdn was unable|502 bad gateway)/)) {
+          if (body.match(/(try again|cdn was unable|502 bad gateway|TIMEDOUT)/i)) {
             throw "Too slow";
           } else {console.error(body); throw e;}
         }
@@ -359,7 +359,7 @@ function NodewhalSession(userAgent) {
         throw error;
       });
     }, function(err) {
-      if ((err + "").match(/(Too slow|TIMEOUT)/)) {
+      if ((err + "").match(/(Too slow|TIMEDOUT)/i)) {
         console.log("retry", method, url, err);
         return true;
       }
