@@ -175,7 +175,7 @@ function NodewhalSession(userAgent) {
       options = options || {},
       max = options.max,
       after = options.after,
-      limit = max || 100;
+      limit = parseInt(max || 100);
     if (limit > 100) {limit = 100;}
     if (url.indexOf('?') < 0) {
       url += '?limit=' + limit;
@@ -268,7 +268,7 @@ function NodewhalSession(userAgent) {
       isSingle = true;
     }
     ids = ids.map(function (id) {
-      if (id.substr(0, 3) == "t3_") {
+      if (id.match(/_/)) {
         return id
       }
       else {
